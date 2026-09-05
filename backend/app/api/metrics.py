@@ -2,22 +2,22 @@ from fastapi import APIRouter
 
 from app.services.payment_service import get_failed_payments
 from app.agents.recovery_agent import analyze_payment
+from app.services.audit_service import get_measured_recovered
 
 
 router = APIRouter(
     prefix="/api/metrics",
-    tags=["Metrics"]
+    tags=["Metrics"],
 )
 
 
 @router.get("/")
 def get_metrics():
-
     payments = get_failed_payments()
 
     total_at_risk = 0
     recoverable_amount = 0
-    recovered_amount = 0
+    estimated_recovered = 0
 
     action_counts = {
         "retry_payment": 0,
@@ -26,12 +26,10 @@ def get_metrics():
         "escalate": 0,
     }
 
-    results = []
+    transactions = []
 
     for payment in payments:
-
         amount = float(payment["amount"])
-
         decision = analyze_payment(payment)
 
         total_at_risk += amount
@@ -39,38 +37,45 @@ def get_metrics():
         if decision["policy_allowed"]:
             recoverable_amount += amount
 
-            action = decision["final_action"]
+        action = decision["final_action"]
 
-            if action in action_counts:
-                action_counts[action] += 1
+        if action in action_counts:
+            action_counts[action] += 1
 
-                results.append({
-                    **payment,
-                    **decision
-                })
+        if action in [
+            "retry_payment",
+            "send_payment_reminder",
+            "send_checkout_reminder",
+        ]:
+            estimated_recovered += amount * 0.35
 
-                # Demo recovery simulation.
-                # Only payments with a recovery action are counted.
-                for payment in results:
-                    if payment["final_action"] in [
-                        "retry_payment",
-                        "send_payment_reminder",
-                        "send_checkout_reminder"
-                    ]:
-                        recovered_amount += payment["amount"] * 0.35
+        transactions.append({
+            **payment,
+            **decision,
+        })
 
-                        recovery_rate = (
-                            (recovered_amount / total_at_risk) * 100
-                            if total_at_risk > 0
-                            else 0
-                        )
+    measured_recovered = get_measured_recovered()
 
-                        return {
-                            "total_transactions": len(payments),
-                            "total_at_risk": round(total_at_risk, 2),
-                            "recoverable_amount": round(recoverable_amount, 2),
-                            "estimated_recovered": round(recovered_amount, 2),
-                            "recovery_rate": round(recovery_rate, 2),
-                            "action_counts": action_counts,
-                            "transactions": results
-                        }
+    recovery_rate = (
+        (estimated_recovered / total_at_risk) * 100
+        if total_at_risk > 0
+        else 0
+    )
+
+    measured_recovery_rate = (
+        (measured_recovered / total_at_risk) * 100
+        if total_at_risk > 0
+        else 0
+    )
+
+    return {
+        "total_transactions": len(transactions),
+        "total_at_risk": round(total_at_risk, 2),
+        "recoverable_amount": round(recoverable_amount, 2),
+        "estimated_recovered": round(estimated_recovered, 2),
+        "measured_recovered": round(measured_recovered, 2),
+        "recovery_rate": round(recovery_rate, 2),
+        "measured_recovery_rate": round(measured_recovery_rate, 2),
+        "action_counts": action_counts,
+        "transactions": transactions,
+    }

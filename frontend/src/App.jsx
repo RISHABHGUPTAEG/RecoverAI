@@ -13,6 +13,9 @@ function App() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [executing, setExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
 
   async function loadMetrics() {
     try {
@@ -27,9 +30,57 @@ function App() {
     }
   }
 
+  async function executeRecovery(paymentId) {
+  setExecuting(true);
+  setExecutionResult(null);
+
+  try {
+    const response = await fetch(`${API}/api/recover/${paymentId}`, {
+      method: "POST",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setExecutionResult({
+        success: false,
+        message: data.detail || "Recovery execution failed",
+      });
+      return;
+    }
+
+    setExecutionResult(data);
+
+// Refresh dashboard metrics and audit trail
+await loadMetrics();
+await loadAuditLogs();
+  } catch (error) {
+    console.error("Recovery execution failed:", error);
+
+    setExecutionResult({
+      success: false,
+      message: "Unable to connect to recovery service",
+    });
+  } finally {
+    setExecuting(false);
+  }
+}
+
+async function loadAuditLogs() {
+  try {
+    const response = await fetch(`${API}/api/audit`);
+    const data = await response.json();
+
+    setAuditLogs(data.logs || []);
+  } catch (error) {
+    console.error("Failed to load audit logs:", error);
+  }
+}
+
   useEffect(() => {
-    loadMetrics();
-  }, []);
+  loadMetrics();
+  loadAuditLogs();
+}, []);
 
   if (loading) {
     return (
@@ -118,16 +169,16 @@ function App() {
           />
 
           <StatCard
-            title="Estimated Recovered"
-            value={money(metrics.estimated_recovered)}
-            subtitle="Based on simulated recovery outcomes"
-          />
+  title="Measured Recovered"
+  value={money(metrics.measured_recovered)}
+  subtitle="Recorded from executed recovery outcomes"
+/>
 
           <StatCard
-            title="Recovery Rate"
-            value={`${metrics.recovery_rate}%`}
-            subtitle="Estimated recovery / revenue at risk"
-          />
+  title="Measured Recovery Rate"
+  value={`${metrics.measured_recovery_rate}%`}
+  subtitle="Measured recovered / revenue at risk"
+/>
 
         </section>
 
@@ -324,6 +375,85 @@ function App() {
 
         </section>
 
+        <section className="audit-panel panel">
+  <div className="panel-header">
+    <div>
+      <h3>Recovery Execution Audit Trail</h3>
+      <p>Every executed recovery action is recorded for review</p>
+    </div>
+
+    <span className="audit-count">
+      {auditLogs.length} Executed
+    </span>
+  </div>
+
+  {auditLogs.length === 0 ? (
+    <div className="empty-audit">
+      <span>◷</span>
+      <p>No recovery actions executed yet.</p>
+    </div>
+  ) : (
+    <div className="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Payment</th>
+            <th>Amount</th>
+            <th>Risk</th>
+            <th>Action</th>
+            <th>Policy</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {auditLogs.map((log, index) => (
+            <tr key={`${log.payment_id}-${index}`}>
+              <td>
+                <strong>{log.payment_id}</strong>
+              </td>
+
+              <td>{money(log.amount)}</td>
+
+              <td>
+                <span
+                  className={
+                    log.risk_score >= 70
+                      ? "risk high"
+                      : log.risk_score >= 40
+                      ? "risk medium"
+                      : "risk low"
+                  }
+                >
+                  {log.risk_score}
+                </span>
+              </td>
+
+              <td>
+                <span className="action">
+                  {log.final_action.replaceAll("_", " ")}
+                </span>
+              </td>
+
+              <td>
+                {log.policy_allowed ? (
+                  <span className="allowed">✓ Allowed</span>
+                ) : (
+                  <span className="blocked">! Blocked</span>
+                )}
+              </td>
+
+              <td className="audit-time">
+                {new Date(log.timestamp).toLocaleString("en-IN")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</section>
+
       </main>
 
 
@@ -391,6 +521,68 @@ function App() {
               <strong>Policy Reason</strong>
               <p>{selected.policy_reason}</p>
             </div>
+
+            {executionResult ? (
+  <div className="execution-result">
+    {executionResult.success ? (
+      <>
+        <div className="execution-success">
+          <strong>✓ Recovery Executed</strong>
+        </div>
+
+        <div className="execution-details">
+          <div>
+            <span>Action</span>
+            <strong>
+              {executionResult.decision.final_action.replaceAll("_", " ")}
+            </strong>
+          </div>
+
+          <div>
+            <span>Outcome</span>
+            <strong className="recovered-status">
+              {executionResult.outcome?.status === "recovered"
+                ? "Recovered"
+                : "Not Recovered"}
+            </strong>
+          </div>
+
+          <div>
+            <span>Recovered Amount</span>
+            <strong className="recovered-amount">
+              {money(
+                executionResult.outcome?.recovered_amount || 0
+              )}
+            </strong>
+          </div>
+        </div>
+
+        <small>
+          Demo recovery outcome recorded in audit trail.
+        </small>
+      </>
+    ) : (
+      <>
+        <strong>
+          ⚠{" "}
+          {executionResult.duplicate
+            ? "Already Executed"
+            : "Execution Failed"}
+        </strong>
+
+        <p>{executionResult.message}</p>
+      </>
+    )}
+  </div>
+) : (
+  <button
+    className="execute-btn"
+    disabled={executing || !selected.policy_allowed}
+    onClick={() => executeRecovery(selected.payment_id)}
+  >
+    {executing ? "Executing..." : "⚡ Execute Recovery"}
+  </button>
+)}
 
           </div>
 

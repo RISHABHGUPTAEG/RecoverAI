@@ -499,3 +499,88 @@ td small {
     grid-template-columns: 1fr;
   }
 }
+
+.audit-panel {
+  margin-top: 24px;
+  margin-bottom: 40px;
+}
+
+.audit-count {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.empty-audit {
+  padding: 45px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.empty-audit span {
+  display: block;
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.empty-audit p {
+  margin: 0;
+}
+
+.audit-time {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.execution-result {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.execution-success {
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+
+.execution-details {
+  display: grid;
+  gap: 12px;
+}
+
+.execution-details div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.execution-details span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.execution-details strong {
+  text-align: right;
+  text-transform: capitalize;
+}
+
+.recovered-status {
+  color: #15803d;
+}
+
+.recovered-amount {
+  font-size: 18px;
+}
+
+.execution-result small {
+  display: block;
+  margin-top: 16px;
+  color: #64748b;
+}
