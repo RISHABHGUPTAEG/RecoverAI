@@ -1,26 +1,46 @@
 # RecoverAI – AI-Powered Revenue Recovery Agent
 
-Razorpay AI Builder Internship 2026 — Track 3: AI Revenue Recovery
+### Razorpay AI Buildathon 2026 — Track 03: AI Revenue Recovery
 
-## Project
-RecoverAI detects failed/at-risk payments, diagnoses likely causes, selects a bounded recovery action, measures outcomes, and records an audit trail.
+RecoverAI is an AI-powered revenue recovery agent designed to help merchants identify revenue at risk, understand why a payment failed or checkout was abandoned, choose an appropriate recovery action, enforce policy guardrails, execute the recovery workflow, and maintain an auditable record of the outcome.
 
-## Structure
-- `backend/` FastAPI API, AI recovery agent, policy engine, services, models, tests, synthetic data
-- `frontend/` React/Vite dashboard
-- `docs/` architecture, AI decision flow, demo script, test-data notes, build log
-- `scripts/` synthetic-data/demo helpers
+---
 
-## Status
-Scaffold only. Implementation will be added file-by-file.
+## 🚨 Problem
 
-## Planned safeguards
-- Confidence thresholds
-- Retry/action limits
-- Stop conditions
-- Human escalation
-- Explainable decisions
-- Complete audit trail
+Failed payments and abandoned checkouts represent direct revenue leakage for merchants.
 
-## Run (after implementation)
-Backend and frontend setup instructions will be added here.
+A simple retry strategy is not sufficient because different payment failures require different interventions.
+
+For example:
+
+- Insufficient funds → payment reminder
+- Bank decline → alternate payment reminder
+- Payment timeout → controlled retry
+- Checkout abandonment → checkout reminder
+- Expired or high-value recovery → manual escalation
+
+RecoverAI automates this decision process while keeping recovery actions bounded by merchant-defined policies.
+
+---
+
+## 💡 Solution
+
+RecoverAI follows a complete revenue recovery pipeline:
+
+```text
+Payment Event
+      ↓
+Risk Detection
+      ↓
+Failure Diagnosis
+      ↓
+AI Recovery Decision
+      ↓
+Policy / Guardrail Check
+      ↓
+Recovery Execution
+      ↓
+Measured Outcome
+      ↓
+Audit Trail
